@@ -27,11 +27,12 @@ body {
     justify-content: center;
     align-items: start;
     flex-direction: column;
-    margin: 0 5px;
-    background-color: #ececec;
-    padding: 10px 15px;
-    border-bottom: 1px solid rgb(156, 156, 156);
-    height: 55px;
+    background-color: #fff;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border-left: 4px solid #472f92;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+    height: 60px;
 }
 
 h6 {
@@ -50,9 +51,17 @@ h4 {
     margin-left: 5px;
 }
 
+.sub-title {
+    font-size: 1rem;
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 0;
+}
+
 .aviso {
-    margin: 0 5px;
-    font-size: 16px;
+    font-size: 13px;
+    color: #888;
+    margin: 0;
 }
 
 .quadro-grafico {

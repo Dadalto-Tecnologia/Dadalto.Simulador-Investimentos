@@ -306,12 +306,6 @@ const goSimulacao = () => {
         <div class="row">
             <div class="col-12 col-md-12 col-lg-6">
                 <h1 class="teste">Que aplicação rende mais?</h1>
-                <!-- <p class="sub-title">Veja quanto seu dinheiro pode render ao simular investimentos em Tesouro Direto,
-                    CDBs,
-                    LCIs
-                    e LCAs, fundos
-                    DI
-                    e compare com o retorno da poupança e a variação da inflação.</p> -->
                 <p class="sub-title">Explore como seu dinheiro pode crescer simulando investimentos em Tesouro Direto,
                     CDBs, LCIs, LCAs e fundos DI. Compare os resultados com o rendimento da poupança e a oscilação da
                     inflação.</p>
@@ -333,7 +327,7 @@ const goSimulacao = () => {
                                 suffix=" meses" fluid size="large" />
                         </div>
                         <div class="col-12 col-md-4 col-lg-4">
-                            <label for="currency-us" class="font-bold block mb-2">Pegamentos dos juros</label>
+                            <label for="currency-us" class="font-bold block mb-2">Pagamento dos juros</label>
                             <div class="radio">
                                 <div>
                                     <RadioButton disabled v-model="freqJuros" value="M" />
@@ -382,18 +376,6 @@ const goSimulacao = () => {
                                 <h5 v-else>{{ $formatar.numero(valorPoupanca, 2) }} %</h5>
                             </div>
                         </div>
-                        <!-- <div class="col-12 col-md-6 col-lg-4">
-                            <div class="quadro-input">
-                                <h6>Rentabilidade do CDB (a.a.)</h6>
-                                <h5>{{ rentCDB.toFixed(2) }} %</h5>
-                            </div>
-                        </div>
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <div class="quadro-input">
-                                <h6>Rentabilidade da LCI/LCA (a.a.)</h6>
-                                <h5>{{ rentLCI_LCA.toFixed(2) }} %</h5>
-                            </div>
-                        </div> -->
                         <div class="col-12">
                             <p class="aviso mb-5">Esses são os parâmetros padrőes utilizados na sua simulação. Você
                                 pode
@@ -407,9 +389,6 @@ const goSimulacao = () => {
             </div>
             <div class="col-12 col-md-12 col-lg-6">
                 <div class="quadro-grafico">
-                    <div class="d-flex justify-content-center align-items-center">
-                        <div class="line"></div>
-                    </div>
                     <h1>Calculadora de Renda Fixa</h1>
                     <p class="descricao-grafico">Descubra o potencial de rendimento do seu dinheiro ao simular
                         aplicações em Tesouro Direto, CDBs, LCIs, LCAs e fundos DI. Compare esses retornos com a
@@ -471,18 +450,13 @@ const goSimulacao = () => {
             </div>
         </div>
         <template #footer>
-            <Button label="Cancel" text severity="danger" @click="dialog = false" autofocus />
-            <Button label="Save" outlined severity="primary" @click="save()" autofocus />
+            <Button label="Cancelar" text severity="danger" @click="dialog = false" autofocus />
+            <Button label="Salvar" outlined severity="primary" @click="save()" autofocus />
         </template>
     </Dialog>
 </template>
 
 <style scoped>
-.grafico {
-    width: 100%;
-    height: 30rem;
-}
-
 .botao {
     background-color: #472f92;
     border-color: #472f92;
@@ -497,5 +471,21 @@ const goSimulacao = () => {
     margin-bottom: 10px;
     width: 40px;
     height: 40px;
+}
+
+.quadro-investimento {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.cabecalho {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px 28px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    flex-wrap: wrap;
+    gap: 12px;
 }
 </style>
