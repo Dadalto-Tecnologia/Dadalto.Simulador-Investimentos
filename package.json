@@ -1,0 +1,28 @@
+{
+  "name": "simulador-investimentos",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@primevue/themes": "^4.2.1",
+    "@types/node": "^22.9.0",
+    "axios": "^1.7.7",
+    "bootstrap": "^5.3.3",
+    "highcharts": "^11.4.8",
+    "moment": "^2.29.1",
+    "primevue": "^4.2.1",
+    "saas": "^1.0.0",
+    "vue": "^3.5.12"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "typescript": "~5.6.2",
+    "vite": "^5.4.10",
+    "vue-tsc": "^2.1.8"
+  }
+}

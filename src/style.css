@@ -1,0 +1,117 @@
+body {
+    background: #ECE9E6;
+    /* fallback for old browsers */
+    background: -webkit-linear-gradient(to right, #FFFFFF, #ECE9E6);
+    /* Chrome 10-25, Safari 5.1-6 */
+    background: linear-gradient(to right, #FFFFFF, #ECE9E6);
+    /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+
+}
+
+#main {
+    padding: 40px;
+    margin-bottom: 15px;
+}
+
+.teste::before {
+    content: "";
+    display: block;
+    width: 30%;
+    height: 5px;
+    background-color: #472f92;
+    margin-bottom: 20px;
+}
+
+.quadro-input {
+    display: flex;
+    justify-content: center;
+    align-items: start;
+    flex-direction: column;
+    margin: 0 5px;
+    background-color: #ececec;
+    padding: 10px 15px;
+    border-bottom: 1px solid rgb(156, 156, 156);
+    height: 55px;
+}
+
+h6 {
+    opacity: 0.7 !important;
+    font-size: 10px !important;    
+    margin: 0!important;
+    margin-bottom: 3px!important;
+}
+
+h5 {    
+    margin: 0!important;
+    margin-bottom: 3px!important;
+}
+
+h4 {
+    margin-left: 5px;
+}
+
+.aviso {
+    margin: 0 5px;
+    font-size: 16px;
+}
+
+.quadro-grafico {
+    margin: 0 30px;
+    background-color: #ececec;
+    padding: 50px;
+    border-radius: 4px;
+}
+
+.quadro-grafico h1 {
+    font-weight: bold;
+    font-size: 4rem;
+    margin-bottom: 40px;
+    text-wrap: wrap;
+}
+
+.descricao-grafico {
+    font-size: 1.6rem;
+    margin-bottom: 20px;
+    font-weight: 300;
+}
+
+.quadro-grafico h1 {
+    font-size: 3.5rem;
+}
+
+.quadro-grafico h1::before {
+    content: "";
+    display: block;
+    width: 30%;
+    height: 5px;
+    background-color: #472f92;
+    margin-bottom: 20px;
+}
+
+.radio {
+    display: flex;
+    justify-content: center;
+    align-items: start;
+    flex-direction: column;
+}
+
+.config {
+    display: flex;
+    justify-content: end;
+    align-items: start;
+}
+
+.simulacao>h3::before {
+    content: "";
+    display: block;
+    width: 10%;
+    height: 5px;
+    background-color: #472f92;
+    margin-bottom: 20px;
+}
+
+.valores {
+    color: #00aeef;
+    font-weight: 700;
+    font-size: 18px;
+}
