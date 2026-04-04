@@ -41,6 +41,21 @@ Single-page Vue 3 + TypeScript application that simulates and compares fixed-inc
 3. `calcularRendimentos()` runs a month-by-month compound-interest loop over the three `InvestmentOption` objects.
 4. Highcharts is rendered imperatively into `chartContainer` ref; subsequent changes call `series[0].setData()` / `xAxis[0].setCategories()` on the existing instance.
 
+## Versioning
+
+After every change, update the `version` field in `package.json` following **MAJOR.MINOR.PATCH**:
+- **PATCH** — bug fixes
+- **MINOR** — new features, backwards-compatible
+- **MAJOR** — breaking changes
+
+After updating the version, commit and push:
+
+```bash
+git add .
+git commit -m "..."
+git push
+```
+
 ### Deployment
 
 Push to `main` triggers `.github/workflows/publish.yml` — installs, builds, then FTP-deploys `dist/` to `/Simulador/` on the production server using secrets `WIN_HOST`, `WIN_USERNAME`, `WIN_PASSWORD`, `WIN_PORT`.

@@ -37,14 +37,6 @@ const aporte = ref<number>(100);
 const meses = ref<number>(12);
 const freqJuros = ref<string>('M');
 
-const versao = ref<{ major: number, minor: number, revision: number }>(
-    { major: 1, minor: 0, revision: 0 }
-);
-
-const autor = {
-    nome: 'Franchescolle Dadalto',
-    email: 'ffdadalto@gmail.com'
-};
 
 const rentCDB = ref<number>(13);
 const rentLCI_LCA = ref<number>(12.00);
@@ -455,10 +447,6 @@ const goSimulacao = () => {
             </div>
         </div>
     </div>
-    <div>
-        <span style="font-style: italic;font-size: 10px;">{{ `Versão: ${versao.major}.${versao.minor}.${versao.revision} | ${autor.nome} (${autor.email})` }}</span>
-    </div>
-
     <Dialog v-model:visible="dialog" modal header="Configurar índices" :style="{ width: '400px' }">
         <template #header>
             <div>
