@@ -1,0 +1,229 @@
+name: Deploy Dadalto.Simulador-Investimentos (Node 20) - Self-Hosted + IIS
+
+on:
+  push:
+    branches: ["main"]
+
+concurrency:
+  group: deploy-Dadalto.Simulador-Investimentos
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Node Build + Deploy on Windows Server (IIS)
+    runs-on: [self-hosted, windows, x64]
+
+    env:
+      SITE_NAME: Dadalto.Simulador-Investimentos
+      APP_POOL_NAME: Dadalto.Simulador-Investimentos
+      SITE_HOSTNAME: simulador.dadalto.tec.br
+      BUILD_OUTPUT_PATH: .\dist
+      IIS_TARGET_PATH: C:\inetpub\wwwroot\Dadalto.Simulador-Investimentos
+      NPM_CONFIG_CACHE: ${{ github.workspace }}\.npm-cache
+
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
+      CF_DNS_NAME: simulador
+      WACS_PATH: C:\win-acme\wacs.exe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure Cloudflare DNS record exists
+        shell: powershell
+        run: |
+          $token = $env:CF_API_TOKEN
+          $zoneId = $env:CF_ZONE_ID
+          $dnsName = $env:CF_DNS_NAME
+          $fullName = "${dnsName}.dadalto.tec.br"
+          $baseUrl = "https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records"
+
+          $raw = curl.exe -s --header "Authorization: Bearer ${token}" --header "Content-Type: application/json" "${baseUrl}?type=CNAME&name=${fullName}"
+          $response = $raw | ConvertFrom-Json
+
+          if ($response.result.Count -gt 0) {
+            Write-Host "DNS record '${fullName}' already exists."
+          } else {
+            Write-Host "DNS record '${fullName}' not found - creating..."
+            $body = @{ type = "CNAME"; name = $dnsName; content = "dadalto.tec.br"; proxied = $true; ttl = 1 } | ConvertTo-Json -Compress
+            $tempFile = [System.IO.Path]::GetTempFileName()
+            Set-Content -Path $tempFile -Value $body -NoNewline
+            $rawCreate = curl.exe -s -X POST --header "Authorization: Bearer ${token}" --header "Content-Type: application/json" -d "@${tempFile}" $baseUrl
+            Remove-Item $tempFile
+            $result = $rawCreate | ConvertFrom-Json
+
+            if ($result.success -eq $true) {
+              Write-Host "DNS record '${fullName}' created successfully."
+            } else {
+              Write-Host "Failed to create DNS record: ${rawCreate}"
+              exit 1
+            }
+          }
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "**/package-lock.json"
+
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        shell: powershell
+        run: npm ci
+
+      - name: Cache Vite
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.vite
+          key: vite-${{ runner.os }}-${{ hashFiles('package-lock.json', 'vite.config.*') }}
+          restore-keys: |
+            vite-${{ runner.os }}-
+
+      - name: Build
+        shell: powershell
+        run: npm run build
+
+      - name: Ensure IIS AppPool and Site exist
+        shell: pwsh
+        run: |
+          $siteName = $env:SITE_NAME
+          $appPoolName = $env:APP_POOL_NAME
+          $targetPath = $env:IIS_TARGET_PATH
+          $hostname = $env:SITE_HOSTNAME
+          $appcmd = Join-Path $env:windir "System32\inetsrv\appcmd.exe"
+
+          New-Item -ItemType Directory -Force -Path $targetPath | Out-Null
+
+          $poolLine = & $appcmd list apppool "$appPoolName" 2>$null
+          if (-not $poolLine) {
+            Write-Host "AppPool '$appPoolName' not found - creating..."
+            & $appcmd add apppool /name:"$appPoolName" /managedRuntimeVersion:"" /managedPipelineMode:Integrated
+            & $appcmd set apppool "$appPoolName" /processModel.identityType:ApplicationPoolIdentity
+            & $appcmd set apppool "$appPoolName" /startMode:AlwaysRunning
+            Write-Host "AppPool '$appPoolName' created."
+          } else {
+            Write-Host "AppPool '$appPoolName' already exists."
+          }
+
+          $expectedBinding = "http/*:80:${hostname}"
+
+          $siteLine = & $appcmd list site "$siteName" 2>$null
+          if (-not $siteLine) {
+            Write-Host "Site '$siteName' not found - creating with hostname '$hostname'..."
+            & $appcmd add site /name:"$siteName" /physicalPath:"$targetPath" /bindings:"$expectedBinding"
+            & $appcmd set site "$siteName" /applicationDefaults.applicationPool:"$appPoolName"
+            Write-Host "Site '$siteName' created."
+          } else {
+            Write-Host "Site '$siteName' already exists. Checking http binding..."
+            $config = & $appcmd list site "$siteName" /config /xml 2>$null
+            $bindings = ([xml]$config).SelectNodes("//binding")
+            $httpBinding = $bindings | Where-Object { $_.protocol -eq "http" } | ForEach-Object { "$($_.protocol)/$($_.bindingInformation)" }
+
+            if ($httpBinding -ne $expectedBinding) {
+              Write-Host "HTTP binding mismatch (current: '$httpBinding', expected: '$expectedBinding') - fixing..."
+              $otherBindings = $bindings | Where-Object { $_.protocol -ne "http" } | ForEach-Object { "$($_.protocol)/$($_.bindingInformation)" }
+              $allBindings = @($expectedBinding) + @($otherBindings) -join ","
+              & $appcmd set site "$siteName" /bindings:"$allBindings"
+              Write-Host "HTTP binding corrected. Other bindings preserved."
+            } else {
+              Write-Host "HTTP binding already correct: $expectedBinding"
+            }
+          }
+
+      - name: Ensure HTTPS certificate (Let's Encrypt via win-acme)
+        shell: powershell
+        run: |
+          $siteName = $env:SITE_NAME
+          $hostname = $env:SITE_HOSTNAME
+          $wacs = $env:WACS_PATH
+          $appcmd = Join-Path $env:windir "System32\inetsrv\appcmd.exe"
+
+          $siteLine = & $appcmd list site "$siteName" 2>$null
+          if (-not $siteLine) { Write-Host "IIS site '$siteName' not found - skipping."; exit 0 }
+
+          $config = & $appcmd list site "$siteName" /config /xml 2>$null
+          $hasHttps = ([xml]$config).SelectNodes("//binding") | Where-Object { $_.protocol -eq "https" }
+
+          if ($hasHttps) {
+            Write-Host "HTTPS binding already exists for '$siteName' - skipping."
+            exit 0
+          }
+
+          if (-not (Test-Path $wacs)) { Write-Host "::error::wacs.exe not found at '$wacs'"; exit 1 }
+
+          $siteId = ($siteLine -replace '.*id:(\d+).*', '$1')
+          Write-Host "Creating HTTPS certificate for '$hostname' (site id=$siteId)..."
+
+          $scriptDir = "C:\win-acme\Scripts"
+          $scriptPath = Join-Path $scriptDir "cloudflare-dns.ps1"
+          New-Item -ItemType Directory -Force -Path $scriptDir | Out-Null
+
+          $scriptContent = @"
+          param([string]`$Action, [string]`$Identifier, [string]`$RecordName, [string]`$Token)
+          `$apiToken = [System.Environment]::GetEnvironmentVariable('CF_API_TOKEN')
+          `$zoneId = [System.Environment]::GetEnvironmentVariable('CF_ZONE_ID')
+          `$baseUrl = "https://api.cloudflare.com/client/v4/zones/`$zoneId/dns_records"
+          if (`$Action -eq 'create') {
+            `$body = @{ type = 'TXT'; name = `$RecordName; content = `$Token; ttl = 120 } | ConvertTo-Json -Compress
+            `$tmpFile = [System.IO.Path]::GetTempFileName()
+            Set-Content -Path `$tmpFile -Value `$body -NoNewline
+            curl.exe -s -X POST --header "Authorization: Bearer `$apiToken" --header "Content-Type: application/json" -d "@`$tmpFile" `$baseUrl | Out-Null
+            Remove-Item `$tmpFile
+          } elseif (`$Action -eq 'delete') {
+            `$raw = curl.exe -s --header "Authorization: Bearer `$apiToken" "`$baseUrl`?type=TXT&name=`$RecordName"
+            (`$raw | ConvertFrom-Json).result | ForEach-Object { curl.exe -s -X DELETE --header "Authorization: Bearer `$apiToken" "`$baseUrl/`$(`$_.id)" | Out-Null }
+          }
+          "@
+          Set-Content -Path $scriptPath -Value $scriptContent -Force
+
+          & $wacs --source iis --siteid $siteId --host $hostname --validationmode dns-01 --validation script --dnsscript $scriptPath --store certificatestore --installation iis --accepttos
+
+          if ($LASTEXITCODE -ne 0) { Write-Host "::warning::wacs.exe exit code: $LASTEXITCODE"; exit 1 }
+
+      - name: Cleanup Cloudflare ACME TXT records
+        if: always()
+        shell: powershell
+        run: |
+          $token = $env:CF_API_TOKEN
+          $zoneId = $env:CF_ZONE_ID
+          $hostname = $env:SITE_HOSTNAME
+          $recordName = "_acme-challenge.${hostname}"
+          $baseUrl = "https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records"
+
+          $raw = curl.exe -s --header "Authorization: Bearer ${token}" --header "Content-Type: application/json" "${baseUrl}?type=TXT&name=${recordName}"
+          $response = $raw | ConvertFrom-Json
+          $records = @($response.result)
+
+          if ($records.Count -eq 0) {
+            Write-Host "No stale ACME TXT records found for '${recordName}'."
+            exit 0
+          }
+
+          foreach ($record in $records) {
+            Write-Host "Deleting stale ACME TXT record '$($record.name)' ($($record.id))..."
+            curl.exe -s -X DELETE --header "Authorization: Bearer ${token}" "${baseUrl}/$($record.id)" | Out-Null
+          }
+
+      - name: Copy dist to IIS folder
+        shell: powershell
+        run: |
+          $source = (Resolve-Path $env:BUILD_OUTPUT_PATH).Path
+          $target = $env:IIS_TARGET_PATH
+
+          New-Item -ItemType Directory -Force -Path $target | Out-Null
+
+          robocopy $source $target /MIR /R:2 /W:2 /NFL /NDL /NP
+
+          $rc = $LASTEXITCODE
+          if ($rc -ge 8) { throw "Robocopy failed (exit code $rc)" }
+
+          exit 0
