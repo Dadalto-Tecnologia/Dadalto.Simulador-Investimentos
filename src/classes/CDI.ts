@@ -13,6 +13,8 @@ export class CDI implements ICDI {
         }
     }
 
+    //teste
+
     init(_data?: any) {
         if (_data) {
             this.VALDATA = _data["VALDATA"] ? new Date(_data["VALDATA"].toString()) : <any>undefined;
